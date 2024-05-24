@@ -38,7 +38,38 @@ def login():
         else:
             msg = 'Incorrect username / password!'
 
-    return render_template_string('login.html', msg=msg)
+    return render_template_string('''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        /* Your custom CSS styles */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <form method="POST">
+            <h2>Login</h2>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" id="password" placeholder="Password" required>
+            <i class="bi bi-eye-slash" id="togglePassword"></i>
+            <button type="submit">Log In</button>
+            <p>{{ msg }}</p>
+            <a href="/register">Create New Account</a>
+            <a href="#">Forgot Password?</a>
+        </form>
+    </div>
+    <script>
+        /* Your JavaScript code */
+    </script>
+</body>
+</html>
+''', msg=msg)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
