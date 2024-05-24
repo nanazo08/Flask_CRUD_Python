@@ -331,6 +331,8 @@ def register():
         email_address = request.form['email_address']
         first_name = request.form['first_name']
         last_name = request.form['last_name']
+        minit = request.form.get('minit')
+        phone = request.form['phone']
         hashed_password = hash_password(password)
 
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -340,7 +342,7 @@ def register():
         if existing_user:
             msg = 'Username already exists!'
         else:
-            cursor.execute('INSERT INTO customers (username, password, email_address, first_name, last_name) VALUES (%s, %s, %s, %s, %s)', (username, hashed_password, email_address, first_name, last_name))
+            cursor.execute('INSERT INTO customers (username, password, email_address, first_name, last_name, minit, phone) VALUES (%s, %s, %s, %s, %s, %s, %s)', (username, hashed_password, email_address, first_name, last_name, minit, phone))
             mysql.connection.commit()  # Commit the transaction
             msg = 'You have successfully registered!'
             return redirect(url_for('login'))
@@ -432,11 +434,13 @@ def register():
 </head>
 <body>
     <div class="container">
-        <form method="POST">
+       <form method="POST">
             <h2>Register</h2>
-            <input type="email" name="email_address" placeholder="Email Address" required>
             <input type="text" name="first_name" placeholder="First Name" required>
+            <input type="text" name="middle_initial" placeholder="Middle Initial">
             <input type="text" name="last_name" placeholder="Last Name" required>
+            <input type="text" name="phone" placeholder="Phone" required>
+            <input type="email" name="email_address" placeholder="Email Address" required>
             <div style="position: relative;">
                 <input type="text" name="username" placeholder="Username" required>
                 <input type="password" name="password" id="password" placeholder="Password" required>
@@ -446,6 +450,8 @@ def register():
             <p>{{ msg }}</p>
             <a href="/">Back to Home</a>
         </form>
+
+
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -534,6 +540,7 @@ def home():
                     <li><a href="{{ url_for('view_menu') }}">View Menu</a></li>
                     <li><a href="{{ url_for('place_order') }}">Place Order</a></li>
                     <li><a href="{{ url_for('orders') }}">View Orders</a></li>
+                    <li><a href="{{ url_for('view_customers') }}">View Customers</a></li>
                 </ul>
                 <a href="http://127.0.0.1:5000/home" class="btn-home">Back to Home</a>
             </div>
@@ -623,6 +630,61 @@ def add_menu_item():
 
 
 ''')
+
+@app.route("/view_customers")
+def view_customers():
+    # Retrieve all registered customers from the database
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("SELECT * FROM customers")
+    customers = cursor.fetchall()
+    cursor.close()
+
+    return render_template_string('''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Customers</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Registered Customers</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Customer ID</th>
+                    <th>FirstName</th>
+                    <th>Middle Initial</th>
+                    <th>LastName</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Username</th>
+                    <th>Password</th>             
+                    <!-- Add more columns as needed -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr>
+                    <td>{{ customer.customer_id }}</td>
+                    <td>{{ customer.first_name }}</td>
+                    <td>{{ customer.minit }}</td>
+                    <td>{{ customer.last_name }}</td>
+                    <td>{{ customer.email_address }}</td>
+                    <td>{{ customer.phone }}</td>
+                    <td>{{ customer.username }}</td>
+                    <td>{{ customer.password }}</td>
+                    <!-- Add more columns as needed -->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{{'http://127.0.0.1:5000/home'}}" class="btn btn-primary">Back to Home</a>
+    </div>
+</body>
+</html>
+''', customers=customers)
 
 @app.route("/view_menu", methods=['GET'])
 def view_menu():
@@ -719,61 +781,185 @@ def view_menu():
 @app.route("/edit/<int:item_id>", methods=['GET', 'POST'])
 def edit(item_id):
     if request.method == 'POST':
+        # Retrieve form data
         item_name = request.form.get('item_name')
         price = request.form.get('price')
         rating = request.form.get('rating')
         comment = request.form.get('comment')
 
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('UPDATE menu SET item_name = %s, price = %s, rating = %s, comment = %s WHERE item_id = %s', 
-                        (item_name, price, rating, comment, item_id))
+        # Prepare the update query based on selected fields
+        update_fields = []
+        update_values = []
 
-        mysql.connection.commit()
-        cursor.close()
-        return redirect(url_for('view_menu'))
-    
+        if request.form.get('edit_name'):
+            update_fields.append('item_name = %s')
+            update_values.append(item_name)
+        if request.form.get('edit_price'):
+            update_fields.append('price = %s')
+            update_values.append(price)
+        if request.form.get('edit_rating'):
+            update_fields.append('rating = %s')
+            update_values.append(rating)
+        if request.form.get('edit_comment'):
+            update_fields.append('comment = %s')
+            update_values.append(comment)
+
+        if update_fields:
+            update_query = 'UPDATE menu SET ' + ', '.join(update_fields) + ' WHERE item_id = %s'
+            update_values.append(item_id)
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute(update_query, tuple(update_values))
+            mysql.connection.commit()
+            cursor.close()
+            return redirect(url_for('view_menu'))
+
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('SELECT * FROM menu WHERE item_id = %s', (item_id,))
     item = cursor.fetchone()
     cursor.close()
 
     return render_template_string('''<!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Edit Menu Item</title>
-                <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-                <style>
-                    /* Your CSS styles here */
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2>Edit Menu Item</h2>
-                    <form method="POST">
-                        <div class="form-group">
-                            <label for="item_name">Item Name:</label>
-                            <input type="text" id="item_name" name="item_name" value="{{ item.item_name }}" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="price">Price:</label>
-                            <input type="text" id="price" name="price" value="{{ item.price }}" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="rating">Rating:</label>
-                            <input type="text" id="rating" name="rating" value="{{ item.rating }}" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="comment">Comment:</label>
-                            <textarea id="comment" name="comment" rows="4" required>{{ item.comment }}</textarea>
-                        </div>
-                        <button type="submit">Update Menu Item</button>
-                    </form>
-                    <a href="http://127.0.0.1:5000/home" class="back-home">Back to Home</a>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Menu Item</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+            flex: 1;
+        }
+        input[type="text"],
+        textarea {
+            width: calc(100% - 30px);
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            flex: 3;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+        .edit-icon {
+            font-size: 20px;
+            color: #007bff;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: color 0.3s ease;
+        }
+        .edit-icon:hover {
+            color: #0056b3;
+        }
+        button[type="submit"],
+        .back-home {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .back-home {
+            display: inline-block;
+            background-color: #6c757d;
+            color: #fff;
+            text-decoration: none;
+        }
+        .back-home:hover {
+            background-color: #5a6268;
+        }
+        button[type="submit"] {
+            background-color: #007bff;
+            color: #fff;
+        }
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Edit Menu Item</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label for="item_name">Item Name:</label>
+                <div class="input-group">
+                    <input type="text" id="item_name" name="item_name" value="{{ item.item_name }}" disabled>
+                    <i class="fas fa-edit edit-icon" onclick="toggleEdit('item_name', 'edit_name')"></i>
+                    <input type="hidden" name="edit_name" id="edit_name" value="">
                 </div>
-            </body>
-            </html>''', item=item)
+            </div>
+            <div class="form-group">
+                <label for="price">Price:</label>
+                <div class="input-group">
+                    <input type="text" id="price" name="price" value="{{ item.price }}" disabled>
+                    <i class="fas fa-edit edit-icon" onclick="toggleEdit('price', 'edit_price')"></i>
+                    <input type="hidden" name="edit_price" id="edit_price" value="">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="rating">Rating:</label>
+                <div class="input-group">
+                    <input type="text" id="rating" name="rating" value="{{ item.rating }}" disabled>
+                    <i class="fas fa-edit edit-icon" onclick="toggleEdit('rating', 'edit_rating')"></i>
+                    <input type="hidden" name="edit_rating" id="edit_rating" value="">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="comment">Comment:</label>
+                <div class="input-group">
+                    <textarea id="comment" name="comment" rows="4" disabled>{{ item.comment }}</textarea>
+                    <i class="fas fa-edit edit-icon" onclick="toggleEdit('comment', 'edit_comment')"></i>
+                    <input type="hidden" name="edit_comment" id="edit_comment" value="">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Menu Item</button>
+        </form>
+        <a href="{{ url_for('home') }}" class="back-home">Back to Home</a>
+    </div>
+
+    <script>
+        function toggleEdit(inputFieldId, hiddenFieldId) {
+            const inputField = document.getElementById(inputFieldId);
+            const hiddenField = document.getElementById(hiddenFieldId);
+            inputField.disabled = !inputField.disabled;
+            hiddenField.value = inputField.disabled ? '' : 'edit';
+            if (!inputField.disabled) {
+                inputField.focus();
+            }
+        }
+    </script>
+</body>
+</html>
+''', item=item)
+
+
+
 
 
 
