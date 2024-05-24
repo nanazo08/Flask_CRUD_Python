@@ -52,6 +52,7 @@ The `.gitignore` file acts as a guide for Git, instructing it on which files and
 
 5. **Smooth Collaboration**: `.gitignore` ensures consistency among team members by specifying which files and folders are ignored, promoting collaboration and preventing conflicts.
 
+<<<<<<< HEAD
 
 
 
@@ -126,3 +127,5 @@ This project is a web-based restaurant management system implemented using Flask
 - price: Price of the menu item.
 - rating: Rating of the menu item.
 - comment: Comment or description of the menu item.
+=======
+>>>>>>> 8c223f8b9411caecc8eb5f8261980ecc2d9721d1
