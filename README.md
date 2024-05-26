@@ -129,3 +129,9 @@ This project is a web-based restaurant management system implemented using Flask
 - comment: Comment or description of the menu item.
 =======
 >>>>>>> 8c223f8b9411caecc8eb5f8261980ecc2d9721d1
+
+
+At the end I'm going to discuss you all about why I do  merge the html in my app.py using render_template_string().
+First, there was some errors when I create templates folder for html file to connect it in Python.
+So I do  merge it Python and html to work it smoothly and I do some changes in my old html to have more 
+design it's a very common but I know I can get more user with that, and that it thank you.
